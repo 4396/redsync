@@ -3,6 +3,8 @@ package redsync
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -102,8 +104,16 @@ var deleteScript = redis.NewScript(1, `
 	end
 `)
 
+var Log = func(string) {}
+
 func (m *Mutex) release(pool Pool, value string) bool {
+	t := time.Now()
 	conn := pool.Get()
+	if strings.Contains(m.name, ".risk.mutex") {
+		if Log != nil {
+			Log(fmt.Sprintf("%s %s", m.name, time.Since(t).String()))
+		}
+	}
 	defer conn.Close()
 	status, err := redis.Int64(deleteScript.Do(conn, m.name, value))
 
